@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>MARTY MARKET: NIGHTMARE SHIFT (LITE)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#020204;font-family:'Courier New',Courier,monospace;color:#f0f0f5}
+.ov{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none}
+#damage-vignette{z-index:9;opacity:0;background:radial-gradient(ellipse at center,rgba(255,0,0,0) 40%,rgba(255,0,0,.85) 125%);will-change:opacity}
+#jumpscare-flash{background:#f00;opacity:0;z-index:45}
+#emp-flash{background:#0cf;opacity:0;z-index:44;transition:opacity .3s}
+#crosshair{position:absolute;top:50%;left:50%;width:8px;height:8px;margin:-4px 0 0 -4px;background:rgba(255,255,255,.85);border:1px solid #000;border-radius:50%;pointer-events:none;z-index:12}
+#crosshair.active-target{transform:scale(1.8);background:#fc0}
+#interaction-prompt{position:absolute;top:55%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid #fc0;color:#fc0;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:bold;letter-spacing:1px;pointer-events:none;z-index:12;display:none}
+#notification-feed{position:absolute;top:150px;left:15px;width:300px;pointer-events:none;z-index:15}
+.notif-msg{background:rgba(10,10,15,.88);border-left:3px solid #0f8;color:#fff;padding:6px 10px;margin-bottom:6px;font-size:12px;border-radius:0 4px 4px 0}
+.notif-msg.danger{border-left-color:#f22;color:#faa}.notif-msg.info{border-left-color:#0cf;color:#cef}
+#hud-top-left{position:absolute;top:15px;left:15px;background:rgba(8,8,12,.85);border:1px solid rgba(255,255,255,.15);border-left:4px solid #f22;padding:12px 16px;border-radius:8px;z-index:14;min-width:220px}
+#hud-title{font-size:13px;font-weight:bold;letter-spacing:1px;color:#f44;margin-bottom:4px;display:flex;justify-content:space-between}
+#timer-display{color:#aaa;font-size:12px}
+#badge-counter{font-size:19px;font-weight:bold;color:#fc0;margin-bottom:6px}
+#objective-text{font-size:11px;color:#0fa;margin-bottom:8px;font-weight:bold}
+.bar-label{font-size:10px;color:#bbb;display:flex;justify-content:space-between;margin:4px 0 2px}
+.bar-track{height:7px;background:rgba(255,255,255,.15);border-radius:4px;overflow:hidden}
+.bar-track div{height:100%;width:100%}
+#stamina-fill{background:#0c6}#battery-fill{background:#fa0}
+#inventory-bar{position:absolute;bottom:20px;left:50%;margin-left:-100px;display:flex;z-index:14;background:rgba(8,8,12,.8);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.2)}
+.inv-slot{width:54px;height:54px;margin-right:10px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.25);border-radius:8px;display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:10px;color:#ccc;position:relative}
+.inv-slot:last-child{margin-right:0}
+.inv-slot.has-item{border-color:#0cf;background:rgba(0,204,255,.15);color:#fff}
+.inv-key{position:absolute;top:2px;left:4px;font-size:9px;color:#888}.inv-icon{font-size:18px;margin-bottom:2px}
+#radar-wrapper{position:absolute;top:15px;right:15px;display:flex;flex-direction:column;align-items:center;z-index:14}
+#radar{width:115px;height:115px;background:radial-gradient(circle,#002814 0%,#000f08 100%);border:2px solid rgba(0,255,136,.5);border-radius:50%;position:relative;overflow:hidden}
+#radar-grid{position:absolute;top:0;left:0;width:100%;height:100%;background-image:radial-gradient(circle,transparent 30%,rgba(0,255,136,.15) 31%,transparent 32%),radial-gradient(circle,transparent 60%,rgba(0,255,136,.15) 61%,transparent 62%),linear-gradient(0deg,transparent 49%,rgba(0,255,136,.2) 50%,transparent 51%),linear-gradient(90deg,transparent 49%,rgba(0,255,136,.2) 50%,transparent 51%)}
+#radar-sweep{position:absolute;top:50%;left:50%;width:50%;height:50%;background:linear-gradient(45deg,rgba(0,255,136,.4) 0%,transparent 70%);transform-origin:0 0;-webkit-animation:spin 3s linear infinite;animation:spin 3s linear infinite}
+@-webkit-keyframes spin{to{-webkit-transform:rotate(360deg)}}@keyframes spin{to{transform:rotate(360deg)}}
+.blip{position:absolute;top:50%;left:50%;border-radius:50%;-webkit-transform:translate(-50%,-50%);transform:translate(-50%,-50%)}
+#radar-blip-player{width:6px;height:6px;background:#0f8;z-index:3}
+#radar-blip-marty{width:9px;height:9px;background:#f22;box-shadow:0 0 8px #f00;z-index:4}
+.radar-card-blip{width:4px;height:4px;background:#fc0;z-index:2}
+#marty-state-label{margin-top:5px;font-size:10px;font-weight:bold;background:rgba(0,0,0,.75);padding:3px 8px;border-radius:4px;color:#0f8;border:1px solid rgba(255,255,255,.2)}
+#touch-zone-look{position:absolute;top:0;right:0;width:55%;height:100%;z-index:6}
+#joystick-container{position:absolute;bottom:30px;left:25px;width:130px;height:130px;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.28);border-radius:50%;z-index:16}
+#joystick-knob{position:absolute;top:40px;left:40px;width:50px;height:50px;background:radial-gradient(circle,rgba(255,60,60,.9),rgba(180,0,0,.9));border:2px solid #f99;border-radius:50%;pointer-events:none}
+#action-cluster{position:absolute;bottom:25px;right:25px;display:grid;grid-template-columns:repeat(2,74px);grid-gap:12px;z-index:16}
+.ctrl-btn{width:74px;height:74px;border-radius:50%;color:#fff;font-weight:bold;font-size:11px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border:2px solid rgba(255,255,255,.45);background:rgba(20,20,28,.75)}
+.ctrl-btn:active{transform:scale(.92)}
+#btn-interact{background:rgba(0,200,90,.5);border-color:#5f8}#btn-sprint{background:rgba(220,150,0,.5);border-color:#fc0}
+#btn-flashlight{background:rgba(0,160,220,.5);border-color:#4df}#btn-crouch{background:rgba(150,80,220,.5);border-color:#c8f}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle at center,#1c0404 0%,#030305 100%);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;z-index:35}
+#menu-avatar{width:110px;height:110px;border-radius:50%;border:4px solid #f11;object-fit:cover;margin-bottom:14px;box-shadow:0 0 30px rgba(255,0,0,.8)}
+.game-logo{color:#f22;font-size:34px;font-weight:bold;letter-spacing:3px;text-shadow:0 0 18px #f00;margin-bottom:6px}
+.subtitle{color:#fc0;font-size:13px;letter-spacing:2px;margin-bottom:18px}
+.difficulty-selector{display:flex;margin-bottom:20px}
+.diff-btn{padding:10px 14px;margin:0 5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.3);color:#ccc;border-radius:6px;font-family:inherit;font-weight:bold;font-size:12px}
+.diff-btn.selected{background:#f22;border-color:#f88;color:#fff}
+.primary-btn{padding:16px 40px;font-size:18px;font-family:inherit;font-weight:bold;color:#fff;background:linear-gradient(135deg,#e00,#800);border:2px solid #f66;border-radius:10px;letter-spacing:1.5px}
+.controls-guide{margin-top:18px;font-size:12px;color:#999;max-width:480px;line-height:1.6}
+#lore-modal{display:none;background:rgba(0,0,0,.9);z-index:40}
+.lore-card{background:#14141c;border:2px solid #0cf;border-radius:10px;padding:24px;max-width:460px;width:90%;text-align:left}
+.lore-header{color:#0cf;font-size:16px;font-weight:bold;border-bottom:1px solid #333;padding-bottom:8px;margin-bottom:12px}
+.lore-body{color:#ddd;font-size:13px;line-height:1.6;margin-bottom:18px}
+#win-screen{display:none;background:radial-gradient(circle,#042b14 0%,#010a04 100%)}
+.stats-box{background:rgba(0,0,0,.6);border:1px solid #0f8;padding:16px 24px;border-radius:8px;margin:16px 0;text-align:left;font-size:14px;line-height:1.8}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+<div id="damage-vignette" class="ov"></div>
+<div id="jumpscare-flash" class="ov"></div>
+<div id="emp-flash" class="ov"></div>
+<div id="crosshair"></div>
+<div id="interaction-prompt">[COLLECT] INTERACT</div>
+
+<div id="hud-top-left">
+  <div id="hud-title"><span>MARTY MARKET</span><span id="timer-display">00:00</span></div>
+  <div id="badge-counter">ID Cards: 0 / 10</div>
+  <div id="objective-text">OBJECTIVE: FIND ALL 10 EMPLOYEE ID CARDS</div>
+  <div class="bar-label"><span>STAMINA</span><span id="stamina-pct">100%</span></div>
+  <div class="bar-track"><div id="stamina-fill"></div></div>
+  <div class="bar-label"><span>FLASHLIGHT BATTERY</span><span id="battery-pct">100%</span></div>
+  <div class="bar-track"><div id="battery-fill"></div></div>
+</div>
+<div id="notification-feed"></div>
+
+<div id="radar-wrapper">
+  <div id="radar">
+    <div id="radar-grid"></div><div id="radar-sweep"></div>
+    <div id="radar-blip-player" class="blip"></div><div id="radar-blip-marty" class="blip"></div>
+  </div>
+  <div id="marty-state-label">MARTY: PATROLLING</div>
+</div>
+
+<div id="inventory-bar">
+  <div class="inv-slot" id="slot-0" onclick="useInventorySlot(0)"></div>
+  <div class="inv-slot" id="slot-1" onclick="useInventorySlot(1)"></div>
+  <div class="inv-slot" id="slot-2" onclick="useInventorySlot(2)"></div>
+</div>
+
+<div id="joystick-container"><div id="joystick-knob"></div></div>
+<div id="touch-zone-look"></div>
+<div id="action-cluster">
+  <div id="btn-flashlight" class="ctrl-btn">LIGHT<br>[F]</div>
+  <div id="btn-crouch" class="ctrl-btn">SNEAK<br>[C]</div>
+  <div id="btn-sprint" class="ctrl-btn">SPRINT<br>[SHIFT]</div>
+  <div id="btn-interact" class="ctrl-btn">ACTION<br>[E]</div>
+</div>
+
+<div id="start-overlay" class="modal">
+  <img id="menu-avatar" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Marty">
+  <div class="game-logo">MARTY MARKET</div>
+  <div class="subtitle">NIGHTMARE SHIFT // LITE EDITION</div>
+  <div class="difficulty-selector">
+    <button class="diff-btn" onclick="selectDifficulty('normal',this)">SHIFT: NORMAL</button>
+    <button class="diff-btn selected" onclick="selectDifficulty('hard',this)">SHIFT: NIGHTMARE</button>
+    <button class="diff-btn" onclick="selectDifficulty('insane',this)">SHIFT: OVERDRIVE</button>
+  </div>
+  <button class="primary-btn" onclick="startGame()">CLOCK IN &amp; ENTER</button>
+  <div class="controls-guide">
+    <b>MOBILE:</b> Left Joystick = Move | Right Screen = Look | Buttons = Sprint, Sneak, Light, Action<br>
+    <b>PC:</b> WASD = Move | Mouse = Look | Shift = Sprint | C = Sneak | F = Light | E = Collect | 1-3 = Use Item<br>
+    <i>Collect all 10 ID Cards, unlock the North Exit Gate, and survive Marty!</i>
+  </div>
+</div>
+
+<div id="lore-modal" class="modal">
+  <div class="lore-card">
+    <div class="lore-header" id="lore-title"></div>
+    <div class="lore-body" id="lore-text"></div>
+    <button class="primary-btn" style="width:100%;padding:12px;font-size:14px" onclick="closeLoreModal()">RESUME SHIFT</button>
+  </div>
+</div>
+
+<div id="win-screen" class="modal">
+  <h1 style="font-size:40px;color:#0f8;text-shadow:0 0 20px #0f8">SHIFT SURVIVED!</h1>
+  <p style="color:#ccc;max-width:440px">You bypassed the security shutters and escaped Marty Market alive.</p>
+  <div class="stats-box" id="win-stats"></div>
+  <button class="primary-btn" style="background:linear-gradient(135deg,#0c6,#063);border-color:#6fa" onclick="location.reload()">PLAY AGAIN</button>
+</div>
+
+<script>
+var $ = function (id) { return document.getElementById(id); };
+
+/* ---------- AUDIO (procedural, one helper) ---------- */
+var audio = {
+  ctx: null,
+  init: function () {
+    if (!this.ctx) {
+      var C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+      this.ctx = new C();
+      try {
+        var c = this.ctx, o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
+        o.type = 'sawtooth'; o.frequency.value = 48; f.type = 'lowpass'; f.frequency.value = 140; g.gain.value = 0.08;
+        o.connect(f); f.connect(g); g.connect(c.destination); o.start();
+      } catch (e) {}
+    }
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+  },
+  tone: function (type, f0, f1, d, v) {
+    if (!this.ctx) return;
+    try {
+      var c = this.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.setValueAtTime(f0, t);
+      if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + d);
+      g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + d);
+      o.connect(g); g.connect(c.destination); o.start(); o.stop(t + d);
+    } catch (e) {}
+  },
+  step: function (sp, cr) { this.tone('triangle', (cr ? 65 : sp ? 115 : 85) + Math.random() * 15, 30, 0.09, cr ? 0.03 : sp ? 0.14 : 0.08); },
+  stomp: function (d) { if (d < 26) this.tone('sine', 75, 22, 0.18, Math.max(0.02, 1 - d / 26) * 0.35); },
+  collect: function () { var s = this; s.tone('sine', 587, 880, 0.18, 0.2); setTimeout(function () { s.tone('sine', 880, 1174, 0.2, 0.2); }, 90); },
+  click: function () { this.tone('square', 900, 250, 0.04, 0.08); },
+  emp: function () { this.tone('sawtooth', 1400, 45, 0.65, 0.35); },
+  roar: function () { this.tone('sawtooth', 180, 95, 0.5, 0.28); },
+  scare: function () { this.tone('sawtooth', 1250, 110, 2, 0.95); this.tone('square', 145, 22, 2, 0.85); }
+};
+
+/* ---------- CONFIG & STATE ---------- */
+var DIFF = {
+  normal: { base: 3.1, chase: 4.3, drain: 1.4, label: 'NORMAL' },
+  hard: { base: 3.6, chase: 5.1, drain: 2.1, label: 'NIGHTMARE' },
+  insane: { base: 4.2, chase: 5.9, drain: 2.9, label: 'OVERDRIVE' }
+};
+var diffKey = 'hard';
+function selectDifficulty(k, b) {
+  diffKey = k;
+  var all = document.querySelectorAll('.diff-btn');
+  for (var i = 0; i < all.length; i++) all[i].classList.remove('selected');
+  b.classList.add('selected');
+}
+var gameState = {
+  active: false, paused: false, isJumpscaring: false, collectedBadges: 0, totalBadges: 10, exitUnlocked: false,
+  elapsedSeconds: 0, stamina: 100, battery: 100, flashlightOn: true, isSprinting: false, isCrouching: false,
+  playerHeight: 1.65, inventory: [null, null, null], logsRead: 0, itemsUsed: 0
+};
+var LORE = [
+  ['VOICE MEMO #01 - NIGHT STOCKER', "Day 4 of the graveyard shift. Corporate locked the front shutters at midnight again. Marty hasn't left his office in three days. He just stares at the security monitors and mutters about 'expired barcodes.' If you hear heavy boots in Aisle 3, turn off your flashlight and crouch behind the shelving."],
+  ['VOICE MEMO #02 - ASSISTANT MANAGER', "I hid the 10 master employee ID cards across the store aisles and storage rooms. You need all 10 to override the main security shutter at the North Wall. Don't let Marty spot you in open corridors - he sprints way faster once he locks onto your light."],
+  ['VOICE MEMO #03 - SECURITY GUARD', "I left a few spare Lithium Batteries, Energy Drinks, and an Experimental EMP Stun Device on the utility tables. The EMP will overload Marty's circuits for 5 full seconds if he corners you. Save it for an emergency!"],
+  ['VOICE MEMO #04 - FINAL WARNING', "The fluorescent lights are failing. Every time someone collects an ID card, the store's lockdown protocol triggers Marty's aggression subroutines. Stay quiet, watch your motion radar, and get out before 6:00 AM."]
+];
+function showNotification(text, type) {
+  var m = document.createElement('div');
+  m.className = 'notif-msg ' + (type || '');
+  m.textContent = text;
+  $('notification-feed').appendChild(m);
+  setTimeout(function () { if (m.parentNode) m.parentNode.removeChild(m); }, 3500);
+}
+
+/* ---------- TEXTURES (all power-of-two, built once) ---------- */
+function canvasTex(w, h, draw, rx, ry) {
+  var c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'));
+  var t = new THREE.CanvasTexture(c);
+  if (rx) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); }
+  return t;
+}
+function floorTex() {
+  return canvasTex(256, 256, function (x) {
+    x.fillStyle = '#18181f'; x.fillRect(0, 0, 256, 256);
+    for (var j = 0; j < 256; j += 32) for (var i = 0; i < 256; i += 32) {
+      if (((i + j) / 32) % 2 === 0) { x.fillStyle = '#1e1e26'; x.fillRect(i, j, 32, 32); }
+      x.fillStyle = 'rgba(0,0,0,.18)'; x.fillRect(i + Math.random() * 18, j + Math.random() * 18, 6, 2);
+    }
+    x.strokeStyle = '#0c0c10'; x.lineWidth = 2;
+    for (var k = 0; k <= 256; k += 32) { x.beginPath(); x.moveTo(k, 0); x.lineTo(k, 256); x.stroke(); x.beginPath(); x.moveTo(0, k); x.lineTo(256, k); x.stroke(); }
+  }, 16, 16);
+}
+function ceilTex() {
+  return canvasTex(128, 128, function (x) {
+    x.fillStyle = '#0d0d12'; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#1f1f29'; x.lineWidth = 3;
+    x.strokeRect(2, 2, 124, 124); x.strokeRect(32, 32, 64, 64);
+  }, 14, 14);
+}
+function wallTex() {
+  return canvasTex(512, 256, function (x) {
+    x.fillStyle = '#24242e'; x.fillRect(0, 0, 512, 256);
+    x.fillStyle = '#880000'; x.fillRect(0, 90, 512, 32); x.fillStyle = '#cc9900'; x.fillRect(0, 122, 512, 8);
+    x.fillStyle = 'rgba(0,0,0,.25)'; for (var i = 0; i < 512; i += 32) x.fillRect(i, 0, 4, 256);
+    x.fillStyle = '#fff'; x.font = 'bold 20px Courier New'; x.textAlign = 'center';
+    x.fillText('MARTY MARKET // AUTHORIZED PERSONNEL ONLY', 256, 112);
+  }, 6, 1);
+}
+function labelTex(name, color, type) {
+  return canvasTex(128, 128, function (x) {
+    x.fillStyle = color; x.fillRect(0, 0, 128, 128); x.fillStyle = '#f8f8f8'; x.fillRect(6, 6, 116, 116);
+    x.fillStyle = color; x.fillRect(11, 11, 106, 106); x.fillStyle = '#fff'; x.textAlign = 'center';
+    x.font = 'bold 15px Courier New'; x.fillText(name, 64, 44); x.font = '8px Courier New'; x.fillText(type, 64, 62);
+    x.fillStyle = '#111'; for (var i = 22; i < 105; i += 4) if (Math.random() > 0.25) x.fillRect(i, 80, 2, 26);
+  });
+}
+function badgeTex(n) {
+  return canvasTex(256, 128, function (x) {
+    x.fillStyle = '#b80000'; x.fillRect(0, 0, 256, 128); x.fillStyle = '#550000'; x.fillRect(0, 0, 256, 32);
+    x.fillStyle = '#fc0'; x.font = 'bold 14px Courier New'; x.textAlign = 'center'; x.fillText('MARTY MARKET SECURITY PASS', 128, 21);
+    x.fillStyle = '#181818'; x.fillRect(16, 42, 64, 72); x.fillStyle = '#f22'; x.fillRect(28, 54, 40, 36);
+    x.fillStyle = '#fff'; x.font = 'bold 20px Courier New'; x.textAlign = 'left'; x.fillText('PASS #' + (n < 10 ? '0' + n : n), 96, 62);
+    x.font = '11px Courier New'; x.fillStyle = '#fcc'; x.fillText('CLEARANCE: LEVEL 5', 96, 84); x.fillText('EXIT OVERRIDE KEY', 96, 102);
+  });
+}
+function signTex(n, label) {
+  return canvasTex(256, 128, function (x) {
+    x.fillStyle = '#111118'; x.fillRect(0, 0, 256, 128); x.strokeStyle = '#f33'; x.lineWidth = 6; x.strokeRect(4, 4, 248, 120);
+    x.fillStyle = '#fc0'; x.font = 'bold 34px Courier New'; x.textAlign = 'center'; x.fillText('AISLE ' + n, 128, 52);
+    x.fillStyle = '#fff'; x.font = 'bold 18px Courier New'; x.fillText(label, 128, 92);
+  });
+}
+function M(o) { return new THREE.MeshPhongMaterial(Object.assign({ shininess: 12, specular: 0x151515 }, o)); }
+
+/* ---------- RENDERER: low internal resolution, no AA, no shadows ---------- */
+var maxRatio = Math.min(window.devicePixelRatio || 1, 1);
+var pixRatio = maxRatio * 0.75;
+var scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x040407, 0.078);
+var camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 70);
+var renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, stencil: false, powerPreference: 'high-performance' });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(pixRatio);
+document.body.appendChild(renderer.domElement);
+
+// Only 3 dynamic lights total (flashlight, Marty glow, exit beacon) + ambient
+scene.add(new THREE.AmbientLight(0x3a4060, 1.7));
+var flashlight = new THREE.SpotLight(0xfff6e5, 5.2, 32, Math.PI / 3.6, 0.38, 1);
+flashlight.position.set(0.18, -0.12, 0);
+flashlight.target.position.set(0, 0, -1);
+camera.add(flashlight); camera.add(flashlight.target); scene.add(camera);
+
+var ceilingLights = [];
+(function () {
+  var geo = new THREE.BoxGeometry(2.4, 0.12, 0.5);
+  for (var x = -20; x <= 20; x += 20) for (var z = -20; z <= 20; z += 20) {
+    var m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xbbddff }));
+    m.position.set(x, 5.92, z); scene.add(m);
+    ceilingLights.push({ mesh: m, phase: Math.random() * 10, lit: true });
+  }
+})();
+
+/* ---------- WORLD ---------- */
+var MARKET = 56, HALF = MARKET / 2, obstacles = [];
+var EXIT_POS = new THREE.Vector3(0, 1.6, -HALF);
+var floor = new THREE.Mesh(new THREE.PlaneGeometry(MARKET, MARKET), M({ map: floorTex() }));
+floor.rotation.x = -Math.PI / 2; scene.add(floor);
+var ceiling = new THREE.Mesh(new THREE.PlaneGeometry(MARKET, MARKET), M({ map: ceilTex(), shininess: 1 }));
+ceiling.rotation.x = Math.PI / 2; ceiling.position.y = 6; scene.add(ceiling);
+
+var wallMat = M({ map: wallTex() });
+(function () { // optional custom wall image, downscaled to save memory
+  var im = new Image();
+  im.onload = function () {
+    var c = document.createElement('canvas'); c.width = 256; c.height = 128;
+    c.getContext('2d').drawImage(im, 0, 0, 256, 128);
+    var t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(8, 1);
+    wallMat.map = t; wallMat.needsUpdate = true;
+    try { var a = document.createElement('canvas'); a.width = 192; a.height = Math.round(192 * im.height / im.width); a.getContext('2d').drawImage(im, 0, 0, a.width, a.height); $('menu-avatar').src = a.toDataURL(); } catch (e) {}
+  };
+  im.src = '1000060066_2.png';
+})();
+function box(w, h, d, x, y, z, mat) {
+  var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat || wallMat);
+  m.position.set(x, y, z); scene.add(m); m.updateMatrixWorld(true);
+  var b = new THREE.Box3().setFromObject(m); obstacles.push(b); return { mesh: m, box: b };
+}
+box(MARKET, 6, 1.2, 0, 3, HALF); box(1.2, 6, MARKET, -HALF, 3, 0); box(1.2, 6, MARKET, HALF, 3, 0);
+box((MARKET - 6) / 2, 6, 1.2, -(HALF + 3) / 2, 3, -HALF); box((MARKET - 6) / 2, 6, 1.2, (HALF + 3) / 2, 3, -HALF);
+var gate = box(6, 5.5, 0.8, 0, 2.75, -HALF, M({ color: 0x33333d, emissive: 0x440000 }));
+var exitSign = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.7, 0.3), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+exitSign.position.set(0, 5.6, -HALF + 0.6); scene.add(exitSign);
+var beacon = new THREE.PointLight(0xff0000, 2.5, 12); beacon.position.set(0, 5, -HALF + 1.5); scene.add(beacon);
+
+var counterMat = M({ color: 0x2a2a35 }), regMat = M({ color: 0x111115 });
+for (var cx = -12; cx <= 12; cx += 8) {
+  box(1.6, 1.1, 4.2, cx, 0.55, 19, counterMat);
+  var reg = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.6), regMat); reg.position.set(cx, 1.35, 18); scene.add(reg);
+}
+
+var FOOD = [
+  { name: 'MARTY SOUP', color: '#990000', type: 'Canned Goods' }, { name: 'MARTY COLA', color: '#0033aa', type: 'Soda 12-Pack' },
+  { name: 'MARTY CHIPS', color: '#b36b00', type: 'Family Size' }, { name: 'MARTY MILK', color: '#007733', type: 'Whole Dairy' },
+  { name: 'MARTY BEANS', color: '#660099', type: 'Organic Tin' }, { name: 'MARTY CEREAL', color: '#cc3300', type: 'Crunchy Oats' }
+];
+var AISLES = ['CANNED GOODS', 'FROZEN & DAIRY', 'SNACKS & SODA', 'DRY PANTRY', 'HOUSEHOLD'];
+var shelfGroup = new THREE.Group(), spots = [], shelfMat = M({ color: 0x1c1c24 }), shelfGeo = new THREE.BoxGeometry(1.7, 3.6, 7.6), ai = 0;
+for (var ax = -18; ax <= 18; ax += 9) {
+  var sg = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.1, 0.12), new THREE.MeshBasicMaterial({ map: signTex(ai + 1, AISLES[ai % 5]) }));
+  sg.position.set(ax, 4.8, 0); scene.add(sg); ai++;
+  for (var az = -14; az <= 10; az += 12) {
+    var sh = new THREE.Mesh(shelfGeo, shelfMat); sh.position.set(ax, 1.8, az); shelfGroup.add(sh); sh.updateMatrixWorld(true);
+    obstacles.push(new THREE.Box3().setFromObject(sh));
+    for (var sy = 0.85; sy <= 2.95; sy += 0.7) for (var sz = -3.1; sz <= 3.1; sz += 0.78) {
+      if (Math.random() < 0.18) continue;
+      var side = Math.random() > 0.5 ? 0.88 : -0.88;
+      spots.push({ k: Math.floor(Math.random() * FOOD.length), x: ax + side, y: sy, z: az + sz, r: side > 0 ? Math.PI / 2 : -Math.PI / 2 });
+    }
+  }
+}
+scene.add(shelfGroup);
+(function () { // ~500 products -> only 6 draw calls and 6 textures
+  var d = new THREE.Object3D();
+  FOOD.forEach(function (f, k) {
+    var list = spots.filter(function (p) { return p.k === k; }); if (!list.length) return;
+    var g = (f.type === 'Canned Goods' || f.type === 'Organic Tin') ? new THREE.CylinderGeometry(0.13, 0.13, 0.36, 8)
+      : f.type === 'Soda 12-Pack' ? new THREE.CylinderGeometry(0.1, 0.1, 0.42, 8) : new THREE.BoxGeometry(0.2, 0.44, 0.28);
+    var im = new THREE.InstancedMesh(g, M({ map: labelTex(f.name, f.color, f.type), shininess: 10 }), list.length);
+    list.forEach(function (p, i) { d.position.set(p.x, p.y, p.z); d.rotation.y = p.r; d.updateMatrix(); im.setMatrixAt(i, d.matrix); });
+    im.frustumCulled = false; scene.add(im);
+  });
+})();
+
+/* ---------- COLLECTIBLES ---------- */
+var badges = [], BADGE_POS = [[-22, -22], [22, -22], [-22, 22], [22, 22], [-13.5, -14], [13.5, -14], [-13.5, 4], [13.5, 4], [-4.5, -8], [4.5, 14]];
+var badgeGeo = new THREE.BoxGeometry(0.58, 0.38, 0.06);
+BADGE_POS.forEach(function (c, i) {
+  var m = new THREE.Mesh(badgeGeo, M({ map: badgeTex(i + 1), emissive: 0x4a2400 }));
+  m.position.set(c[0], 1.25, c[1]);
+  var dot = document.createElement('div'); dot.className = 'blip radar-card-blip'; $('radar').appendChild(dot);
+  m.userData = { collected: false, y0: 1.25, phase: Math.random() * 6.28, dot: dot };
+  badges.push(m); scene.add(m);
+});
+var pickups = [], pickGeo = new THREE.OctahedronGeometry(0.28, 0);
+[['battery', 'BATTERY', '🔋', 0xffcc00, -22, 0], ['battery', 'BATTERY', '🔋', 0xffcc00, 22, 0], ['energy', 'ADRENALINE', '⚡', 0x00ff88, -4.5, 18],
+ ['energy', 'ADRENALINE', '⚡', 0x00ff88, 4.5, -20], ['emp', 'EMP STUN', '💠', 0x00ccff, 0, -2], ['emp', 'EMP STUN', '💠', 0x00ccff, -13.5, 18]].forEach(function (c) {
+  var m = new THREE.Mesh(pickGeo, M({ color: c[3], emissive: c[3], emissiveIntensity: 0.4 }));
+  m.position.set(c[4], 1, c[5]); m.userData = { id: c[0], name: c[1], icon: c[2], collected: false, y0: 1 };
+  pickups.push(m); scene.add(m);
+});
+var logs = [];
+[[-12, 1.25, 19], [12, 1.25, 19], [-23, 1.1, -12], [23, 1.1, 12]].forEach(function (p, i) {
+  var m = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.14, 0.32), M({ color: 0x00aaff, emissive: 0x004488 }));
+  m.position.set(p[0], p[1], p[2]); m.userData = { idx: i, read: false }; logs.push(m); scene.add(m);
+});
+
+/* ---------- MARTY ---------- */
+var monster = new THREE.Group();
+var redMat = M({ color: 0xcc0000, shininess: 30 }), greenMat = M({ color: 0x187a2c }), darkMat = M({ color: 0x12121a });
+var whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff }), blackMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+function add(g, mesh, x, y, z) { mesh.position.set(x, y, z); g.add(mesh); return mesh; }
+add(monster, new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.25, 0.58), greenMat), 0, 2.25, 0);
+add(monster, new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.14, 0.04), new THREE.MeshBasicMaterial({ color: 0xffcc00 })), -0.24, 2.55, 0.3);
+var headGroup = new THREE.Group(); headGroup.position.y = 3.35;
+add(headGroup, new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.92, 0.88), redMat), 0, 0, 0);
+var spikeGeo = new THREE.ConeGeometry(0.13, 0.55, 6);
+for (var spx = -0.38; spx <= 0.39; spx += 0.25) add(headGroup, new THREE.Mesh(spikeGeo, redMat), spx, 0.65, 0);
+var eyeGeo = new THREE.SphereGeometry(0.17, 8, 8), pupGeo = new THREE.SphereGeometry(0.085, 6, 6);
+add(headGroup, new THREE.Mesh(eyeGeo, whiteMat), -0.25, 0.12, 0.45); add(headGroup, new THREE.Mesh(eyeGeo, whiteMat), 0.25, 0.12, 0.45);
+add(headGroup, new THREE.Mesh(pupGeo, blackMat), -0.25, 0.12, 0.53); add(headGroup, new THREE.Mesh(pupGeo, blackMat), 0.25, 0.12, 0.53);
+add(headGroup, new THREE.Mesh(new THREE.RingGeometry(0, 0.28, 12), blackMat), 0, -0.22, 0.45);
+monster.add(headGroup);
+var aura = new THREE.PointLight(0xff0000, 1.8, 9); aura.position.set(0, 2.8, 0.6); monster.add(aura);
+function limb(geo, mat, x, y, oy) { var p = new THREE.Group(); p.position.set(x, y, 0); add(p, new THREE.Mesh(geo, mat), 0, oy, 0); monster.add(p); return p; }
+var armGeo = new THREE.CylinderGeometry(0.1, 0.1, 1.35, 8), legGeo = new THREE.BoxGeometry(0.28, 1.6, 0.28);
+var armL = limb(armGeo, redMat, -0.62, 2.75, -0.65), armR = limb(armGeo, redMat, 0.62, 2.75, -0.65);
+var legL = limb(legGeo, darkMat, -0.26, 1.6, -0.8), legR = limb(legGeo, darkMat, 0.26, 1.6, -0.8);
+monster.position.set(0, 0, -22); scene.add(monster);
+
+var marty = {
+  state: 'PATROL', stun: 0, search: 0, last: new THREE.Vector3(), wp: 0, stepT: 0,
+  way: [new THREE.Vector3(-22, 0, -22), new THREE.Vector3(22, 0, -22), new THREE.Vector3(22, 0, 22), new THREE.Vector3(-22, 0, 22), new THREE.Vector3(-9, 0, 0), new THREE.Vector3(9, 0, 0)]
+};
+
+/* ---------- INVENTORY & INTERACTION ---------- */
+function updateInventoryUI() {
+  for (var i = 0; i < 3; i++) {
+    var s = $('slot-' + i), it = gameState.inventory[i];
+    s.className = 'inv-slot' + (it ? ' has-item' : '');
+    s.innerHTML = '<span class="inv-key">[' + (i + 1) + ']</span><span class="inv-icon">' + (it ? it.icon : '-') + '</span><span>' + (it ? it.name : 'EMPTY') + '</span>';
+  }
+}
+updateInventoryUI();
+function useInventorySlot(i) {
+  if (!gameState.active || gameState.paused || gameState.isJumpscaring) return;
+  var it = gameState.inventory[i]; if (!it) return;
+  gameState.itemsUsed++;
+  if (it.id === 'battery') { gameState.battery = Math.min(100, gameState.battery + 65); showNotification('BATTERY REPLACED (+65% CHARGE)', 'info'); audio.collect(); }
+  else if (it.id === 'energy') { gameState.stamina = 100; showNotification('ADRENALINE BOOST! STAMINA MAXED!', 'info'); audio.collect(); }
+  else {
+    marty.state = 'STUNNED'; marty.stun = 5.5; audio.emp();
+    var f = $('emp-flash'); f.style.opacity = '0.85'; setTimeout(function () { f.style.opacity = '0'; }, 300);
+    showNotification('EMP DETONATED! MARTY STUNNED FOR 5.5s!', 'info');
+  }
+  gameState.inventory[i] = null; updateInventoryUI();
+}
+function closeLoreModal() { $('lore-modal').style.display = 'none'; gameState.paused = false; }
+function triggerInteraction() {
+  if (!gameState.active || gameState.paused || gameState.isJumpscaring) return;
+  var p = camera.position, i, o;
+  for (i = 0; i < badges.length; i++) {
+    o = badges[i];
+    if (!o.userData.collected && p.distanceTo(o.position) < 3.8) {
+      o.userData.collected = true; scene.remove(o); o.userData.dot.parentNode.removeChild(o.userData.dot);
+      gameState.collectedBadges++; audio.collect();
+      $('badge-counter').textContent = 'ID Cards: ' + gameState.collectedBadges + ' / 10';
+      showNotification('COLLECTED EMPLOYEE ID CARD (' + gameState.collectedBadges + '/10)');
+      marty.last.copy(p); if (marty.state !== 'STUNNED') { marty.state = 'SEARCH'; marty.search = 6; }
+      if (gameState.collectedBadges >= gameState.totalBadges) unlockExit();
+      return;
+    }
+  }
+  for (i = 0; i < pickups.length; i++) {
+    o = pickups[i];
+    if (!o.userData.collected && p.distanceTo(o.position) < 3.6) {
+      var e = gameState.inventory.indexOf(null);
+      if (e < 0) { showNotification('INVENTORY FULL! USE AN ITEM FIRST.', 'danger'); return; }
+      gameState.inventory[e] = { id: o.userData.id, name: o.userData.name, icon: o.userData.icon }; updateInventoryUI();
+      o.userData.collected = true; scene.remove(o); audio.collect(); showNotification('PICKED UP: ' + o.userData.name, 'info');
+      return;
+    }
+  }
+  for (i = 0; i < logs.length; i++) {
+    o = logs[i];
+    if (p.distanceTo(o.position) < 3.6) {
+      $('lore-title').textContent = LORE[o.userData.idx][0]; $('lore-text').textContent = LORE[o.userData.idx][1];
+      $('lore-modal').style.display = 'flex'; gameState.paused = true;
+      if (!o.userData.read) { o.userData.read = true; gameState.logsRead++; }
+      return;
+    }
+  }
+  if (gameState.exitUnlocked && p.distanceTo(EXIT_POS) < 5) triggerVictory();
+}
+function unlockExit() {
+  gameState.exitUnlocked = true;
+  $('objective-text').textContent = 'OBJECTIVE: ESCAPE THROUGH THE NORTH EXIT GATE!'; $('objective-text').style.color = '#fc0';
+  showNotification('ALL 10 ID CARDS COLLECTED! NORTH EXIT GATE UNLOCKED!', 'info');
+  var k = obstacles.indexOf(gate.box); if (k > -1) obstacles.splice(k, 1);
+  gate.mesh.position.y = 7.5; exitSign.material.color.setHex(0x00ff66); beacon.color.setHex(0x00ff66);
+}
+
+/* ---------- CONTROLS (touch events only: works on iOS 12) ---------- */
+camera.position.set(0, 1.65, 23); camera.rotation.order = 'YXZ';
+var yaw = 0, pitch = 0, moveX = 0, moveZ = 0, keys = {};
+function look(dx, dy, s) {
+  yaw -= dx * s; pitch = Math.max(-1.4, Math.min(1.4, pitch - dy * s));
+  camera.rotation.y = yaw; camera.rotation.x = pitch;
+}
+function playing() { return gameState.active && !gameState.paused && !gameState.isJumpscaring; }
+document.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+function trackTouch(el, onStart, onMove, onEnd) { // identifier-tracked so look + move work together
+  var id = null;
+  el.addEventListener('touchstart', function (e) { e.preventDefault(); if (id !== null) return; var t = e.changedTouches[0]; id = t.identifier; onStart(t); }, { passive: false });
+  el.addEventListener('touchmove', function (e) { e.preventDefault(); for (var i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === id) onMove(e.changedTouches[i]); }, { passive: false });
+  function end(e) { for (var i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === id) { id = null; onEnd(); } }
+  el.addEventListener('touchend', end); el.addEventListener('touchcancel', end);
+}
+var lx = 0, ly = 0;
+trackTouch($('touch-zone-look'), function (t) { lx = t.clientX; ly = t.clientY; }, function (t) {
+  if (playing()) look(t.clientX - lx, t.clientY - ly, 0.0048); lx = t.clientX; ly = t.clientY;
+}, function () {});
+var joyEl = $('joystick-container'), knob = $('joystick-knob');
+function joy(t) {
+  var r = joyEl.getBoundingClientRect(), x = t.clientX - (r.left + r.width / 2), y = t.clientY - (r.top + r.height / 2);
+  var d = Math.min(Math.hypot(x, y), 45), a = Math.atan2(y, x); x = Math.cos(a) * d; y = Math.sin(a) * d;
+  knob.style.transform = 'translate(' + x + 'px,' + y + 'px)'; moveX = x / 45; moveZ = y / 45;
+}
+trackTouch(joyEl, joy, joy, function () { knob.style.transform = 'translate(0px,0px)'; moveX = 0; moveZ = 0; });
+function holdBtn(id, down, up) {
+  var el = $(id);
+  el.addEventListener('touchstart', function (e) { e.preventDefault(); down(); }, { passive: false });
+  if (up) { el.addEventListener('touchend', function (e) { e.preventDefault(); up(); }); el.addEventListener('touchcancel', up); }
+}
+holdBtn('btn-sprint', function () { gameState.isSprinting = true; }, function () { gameState.isSprinting = false; });
+holdBtn('btn-crouch', toggleCrouch); holdBtn('btn-flashlight', toggleFlashlight); holdBtn('btn-interact', triggerInteraction);
+function toggleFlashlight() {
+  if (gameState.battery <= 0) { showNotification('FLASHLIGHT BATTERY DEPLETED!', 'danger'); return; }
+  gameState.flashlightOn = !gameState.flashlightOn; flashlight.visible = gameState.flashlightOn; audio.click();
+}
+function toggleCrouch() {
+  gameState.isCrouching = !gameState.isCrouching; gameState.playerHeight = gameState.isCrouching ? 0.95 : 1.65;
+  showNotification(gameState.isCrouching ? 'STEALTH CROUCH ACTIVE (REDUCED VISIBILITY)' : 'STANDING POSTURE', 'info');
+}
+window.addEventListener('keydown', function (e) {
+  keys[e.code] = true;
+  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') gameState.isSprinting = true;
+  if (e.code === 'KeyC') toggleCrouch(); if (e.code === 'KeyF') toggleFlashlight(); if (e.code === 'KeyE') triggerInteraction();
+  if (e.code === 'Digit1') useInventorySlot(0); if (e.code === 'Digit2') useInventorySlot(1); if (e.code === 'Digit3') useInventorySlot(2);
+});
+window.addEventListener('keyup', function (e) { keys[e.code] = false; if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') gameState.isSprinting = false; });
+renderer.domElement.addEventListener('click', function () { if (playing() && renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock(); });
+document.addEventListener('mousemove', function (e) { if (document.pointerLockElement === renderer.domElement && playing()) look(e.movementX, e.movementY, 0.0024); });
+
+/* ---------- COLLISION & AI HELPERS (no per-frame allocations) ---------- */
+var tmpV = new THREE.Vector3(), tmpD = new THREE.Vector3(), tmpO = new THREE.Vector3(), Y_AXIS = new THREE.Vector3(0, 1, 0), raycaster = new THREE.Raycaster();
+function hit(pos, r) { for (var i = 0; i < obstacles.length; i++) if (obstacles[i].distanceToPoint(pos) < r) return true; return false; }
+function canSee(m, p) {
+  var dist = m.distanceTo(p), maxV = gameState.isCrouching ? (gameState.flashlightOn ? 14 : 7) : (gameState.flashlightOn ? 24 : 15);
+  if (dist > maxV) return false;
+  tmpO.set(m.x, 2.8, m.z); tmpD.subVectors(p, tmpO).normalize(); raycaster.set(tmpO, tmpD);
+  var h = raycaster.intersectObjects(shelfGroup.children, false);
+  return !(h.length && h[0].distance < dist);
+}
+var STEER = [Math.PI / 6, -Math.PI / 6, Math.PI / 3, -Math.PI / 3, Math.PI / 2, -Math.PI / 2, 2 * Math.PI / 3, -2 * Math.PI / 3], steerOut = new THREE.Vector3();
+function steer(cur, target, step) {
+  steerOut.subVectors(target, cur); steerOut.y = 0;
+  if (steerOut.lengthSq() < 0.001) return steerOut.set(0, 0, 0);
+  steerOut.normalize();
+  if (!hit(tmpV.copy(cur).addScaledVector(steerOut, step), 0.65)) return steerOut;
+  var base = steerOut.clone();
+  for (var i = 0; i < STEER.length; i++) {
+    steerOut.copy(base).applyAxisAngle(Y_AXIS, STEER[i]);
+    if (!hit(tmpV.copy(cur).addScaledVector(steerOut, step), 0.65)) return steerOut;
+  }
+  return steerOut.set(0, 0, 0);
+}
+
+/* ---------- JUMPSCARE / VICTORY / START ---------- */
+function jumpscare() {
+  if (gameState.isJumpscaring) return;
+  gameState.isJumpscaring = true; gameState.active = false;
+  if (document.exitPointerLock) document.exitPointerLock();
+  flashlight.visible = true; flashlight.color.setHex(0xff0000); flashlight.intensity = 8; audio.scare();
+  var fl = $('jumpscare-flash'), t0 = performance.now();
+  (function frame(now) {
+    var el = (now - t0) / 1000;
+    var f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).multiplyScalar(0.62);
+    monster.position.copy(camera.position).add(f); monster.position.y = camera.position.y - 0.55; monster.lookAt(camera.position);
+    armL.rotation.set(-Math.PI / 2, 0.55, 0); armR.rotation.set(-Math.PI / 2, -0.55, 0);
+    camera.position.x += (Math.random() - 0.5) * 0.28; camera.position.y += (Math.random() - 0.5) * 0.28;
+    camera.rotation.z = (Math.random() - 0.5) * 0.55; headGroup.rotation.z = (Math.random() - 0.5) * 1.3;
+    fl.style.opacity = Math.sin(el * 65) > 0 ? 0.88 : 0.12;
+    renderer.render(scene, camera);
+    if (el < 2) requestAnimationFrame(frame); else { fl.style.opacity = '1'; setTimeout(function () { location.reload(); }, 350); }
+  })(performance.now());
+}
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function triggerVictory() {
+  gameState.active = false; if (document.exitPointerLock) document.exitPointerLock();
+  var s = gameState.elapsedSeconds;
+  $('win-stats').innerHTML = '<b>DIFFICULTY SHIFT:</b> ' + DIFF[diffKey].label + '<br><b>SURVIVAL TIME:</b> ' + pad(Math.floor(s / 60)) + ':' + pad(Math.floor(s % 60)) +
+    '<br><b>ID CARDS RECOVERED:</b> ' + gameState.collectedBadges + ' / 10<br><b>AUDIO LOGS DISCOVERED:</b> ' + gameState.logsRead + ' / ' + LORE.length + '<br><b>UTILITY ITEMS USED:</b> ' + gameState.itemsUsed;
+  $('win-screen').style.display = 'flex';
+}
+function startGame() {
+  audio.init(); $('start-overlay').style.display = 'none'; gameState.active = true;
+  showNotification('SHIFT STARTED. FIND ALL 10 ID CARDS!', 'info');
+}
+
+/* ---------- MAIN LOOP ---------- */
+var clock = new THREE.Clock(), stepT = 0, hudAcc = 0, fpsAcc = 0, fpsN = 0, seeT = 0, seeCache = false, lastLbl = '';
+var elStam = $('stamina-fill'), elStamP = $('stamina-pct'), elBat = $('battery-fill'), elBatP = $('battery-pct'), elTime = $('timer-display');
+var elVig = $('damage-vignette'), elCross = $('crosshair'), elPrompt = $('interaction-prompt'), elLbl = $('marty-state-label'), elMartyDot = $('radar-blip-marty');
+var fwd = new THREE.Vector3(), rgt = new THREE.Vector3(), mv = new THREE.Vector3();
+function lbl(t, c) { if (t !== lastLbl) { lastLbl = t; elLbl.textContent = t; elLbl.style.color = c; } }
+function radar(wp, el, p) {
+  var dx = wp.x - p.x, dz = wp.z - p.z, cy = Math.cos(-yaw), sy = Math.sin(-yaw);
+  var rx = (dx * cy - dz * sy) * 1.85, rz = (dx * sy + dz * cy) * 1.85, d = Math.hypot(rx, rz);
+  if (d > 48) { rx = rx / d * 48; rz = rz / d * 48; }
+  el.style.webkitTransform = el.style.transform = 'translate(calc(-50% + ' + rx.toFixed(1) + 'px), calc(-50% + ' + rz.toFixed(1) + 'px))';
+}
+function animate() {
+  if (!gameState.isJumpscaring) requestAnimationFrame(animate);
+  var delta = Math.min(clock.getDelta(), 0.1), t = clock.elapsedTime, i;
+  for (i = 0; i < badges.length; i++) { var b = badges[i]; if (!b.userData.collected) { b.rotation.y += delta * 2.6; b.position.y = b.userData.y0 + Math.sin(t * 3.2 + b.userData.phase) * 0.09; } }
+  for (i = 0; i < pickups.length; i++) { var q = pickups[i]; if (!q.userData.collected) { q.rotation.y += delta * 2; q.rotation.x += delta * 1.2; q.position.y = 1 + Math.sin(t * 4 + q.position.x) * 0.08; } }
+  for (i = 0; i < ceilingLights.length; i++) {
+    var c = ceilingLights[i], lit = !(Math.sin(t * 7 + c.phase) * Math.cos(t * 19 + c.phase) > 0.85);
+    if (lit !== c.lit) { c.lit = lit; c.mesh.material.color.setHex(lit ? 0xbbddff : 0x222233); }
+  }
+  if (!playing()) { if (gameState.active) renderer.render(scene, camera); return; }
+
+  gameState.elapsedSeconds += delta;
+  hudAcc += delta; var hud = hudAcc > 0.12; if (hud) hudAcc = 0;
+  fpsAcc += delta; fpsN++;
+  if (fpsAcc > 1.2) { // adaptive resolution: trade sharpness for smoothness
+    var fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
+    if (fps < 42 && pixRatio > 0.4) { pixRatio -= 0.1; renderer.setPixelRatio(pixRatio); }
+    else if (fps > 57 && pixRatio < maxRatio) { pixRatio = Math.min(maxRatio, pixRatio + 0.05); renderer.setPixelRatio(pixRatio); }
+  }
+  if (hud) { var s = gameState.elapsedSeconds; elTime.textContent = pad(Math.floor(s / 60)) + ':' + pad(Math.floor(s % 60)); }
+
+  var inF = -moveZ, inR = moveX;
+  if (keys.KeyW || keys.ArrowUp) inF = 1; if (keys.KeyS || keys.ArrowDown) inF = -1;
+  if (keys.KeyA || keys.ArrowLeft) inR = -1; if (keys.KeyD || keys.ArrowRight) inR = 1;
+  var moving = Math.hypot(inF, inR) > 0.05, cfg = DIFF[diffKey], speed = 3.6;
+  if (gameState.isCrouching) { speed = 2; gameState.stamina = Math.min(100, gameState.stamina + delta * 24); }
+  else if (gameState.isSprinting && gameState.stamina > 0 && moving) { speed = 6.2; gameState.stamina = Math.max(0, gameState.stamina - delta * 32); }
+  else gameState.stamina = Math.min(100, gameState.stamina + delta * 18);
+  if (hud) { elStam.style.width = gameState.stamina + '%'; elStamP.textContent = Math.round(gameState.stamina) + '%'; }
+
+  if (gameState.flashlightOn) {
+    gameState.battery = Math.max(0, gameState.battery - delta * cfg.drain);
+    if (gameState.battery <= 0) { gameState.flashlightOn = false; flashlight.visible = false; showNotification('FLASHLIGHT BATTERY DEAD!', 'danger'); }
+    else flashlight.intensity = gameState.battery < 18 ? (Math.random() > 0.25 ? 3.5 : 0.4) : 5.2;
+  }
+  if (hud) { elBat.style.width = gameState.battery + '%'; elBatP.textContent = Math.round(gameState.battery) + '%'; }
+
+  var p = camera.position;
+  p.y += (gameState.playerHeight - p.y) * Math.min(1, delta * 12);
+  if (moving) {
+    fwd.set(0, 0, -1).applyAxisAngle(Y_AXIS, yaw); rgt.set(1, 0, 0).applyAxisAngle(Y_AXIS, yaw);
+    mv.set(0, 0, 0).addScaledVector(fwd, inF).addScaledVector(rgt, inR).normalize().multiplyScalar(speed * delta);
+    tmpV.set(p.x + mv.x, p.y, p.z); if (!hit(tmpV, 0.42)) p.x = Math.max(-HALF + 1.2, Math.min(HALF - 1.2, tmpV.x));
+    tmpV.set(p.x, p.y, p.z + mv.z); if (!hit(tmpV, 0.42)) p.z = Math.max(-HALF + 1.2, Math.min(HALF - 1.2, tmpV.z));
+    stepT += delta * (gameState.isSprinting ? 14 : 9); p.y += Math.sin(stepT) * 0.025;
+    if (Math.sin(stepT) < -0.95) audio.step(gameState.isSprinting, gameState.isCrouching);
+  }
+
+  if (hud) {
+    var near = gameState.exitUnlocked && p.distanceTo(EXIT_POS) < 5, j;
+    for (j = 0; j < badges.length && !near; j++) if (!badges[j].userData.collected && p.distanceTo(badges[j].position) < 3.8) near = true;
+    for (j = 0; j < pickups.length && !near; j++) if (!pickups[j].userData.collected && p.distanceTo(pickups[j].position) < 3.6) near = true;
+    for (j = 0; j < logs.length && !near; j++) if (p.distanceTo(logs[j].position) < 3.6) near = true;
+    elCross.className = near ? 'active-target' : ''; elPrompt.style.display = near ? 'block' : 'none';
+  }
+
+  /* Marty AI */
+  var mp = monster.position, dist = mp.distanceTo(p);
+  elVig.style.opacity = dist < 14 ? ((14 - dist) / 14 * 0.8).toFixed(2) : '0';
+  if (marty.state === 'STUNNED') {
+    marty.stun -= delta; lbl('MARTY: STUNNED', '#0cf');
+    headGroup.rotation.x = 0.45; headGroup.rotation.z = Math.sin(t * 25) * 0.25;
+    if (marty.stun <= 0) { marty.state = 'SEARCH'; marty.search = 5; headGroup.rotation.set(0, 0, 0); }
+  } else {
+    seeT -= delta; if (seeT <= 0) { seeT = 0.15; seeCache = canSee(mp, p); }
+    if (seeCache || (gameState.isSprinting && moving && dist < 13)) {
+      if (marty.state !== 'CHASE') { audio.roar(); showNotification('MARTY HAS SPOTTED YOU! RUN!', 'danger'); }
+      marty.state = 'CHASE'; marty.last.copy(p); marty.search = 5;
+    } else if (marty.state === 'CHASE') marty.state = 'SEARCH';
+    var goal, spd = cfg.base + gameState.collectedBadges * 0.14;
+    if (marty.state === 'CHASE') { goal = p; spd = cfg.chase + gameState.collectedBadges * 0.15; lbl('MARTY: HUNTING YOU!', '#f22'); }
+    else if (marty.state === 'SEARCH') {
+      goal = marty.last; marty.search -= delta; lbl('MARTY: SEARCHING...', '#fa0');
+      if (marty.search <= 0 || mp.distanceTo(goal) < 1.5) marty.state = 'PATROL';
+    } else {
+      goal = marty.way[marty.wp]; lbl('MARTY: PATROLLING', '#0f8');
+      if (mp.distanceTo(goal) < 1.8) marty.wp = (marty.wp + 1) % marty.way.length;
+    }
+    var step = spd * delta, dir = steer(mp, goal, step);
+    if (dir.lengthSq() > 0.001) {
+      mp.addScaledVector(dir, step); monster.lookAt(mp.x + dir.x, mp.y, mp.z + dir.z);
+      var as = marty.state === 'CHASE' ? 15 : 9, sw = Math.sin(t * as) * 0.75;
+      legL.rotation.x = sw; legR.rotation.x = -sw; armL.rotation.x = -sw; armR.rotation.x = sw;
+      marty.stepT += delta * as; if (Math.sin(marty.stepT) < -0.92) audio.stomp(dist);
+    }
+    if (dist <= 2.15) jumpscare();
+  }
+
+  if (hud) { radar(mp, elMartyDot, p); for (i = 0; i < badges.length; i++) if (!badges[i].userData.collected) radar(badges[i].position, badges[i].userData.dot, p); }
+  renderer.render(scene, camera);
+}
+window.addEventListener('resize', function () {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
+});
+animate();
+</script>
+</body>
+</html>
